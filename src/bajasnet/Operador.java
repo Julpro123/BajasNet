@@ -29,4 +29,9 @@ public class Operador implements Serializable {
     public String getApellido() { return apellido; }
     public String getDni()      { return dni; }
     public boolean isAdmin()    { return esAdmin; }
+
+    @Override
+    public String toString() {
+        return email + " — " + nombre + " " + apellido;
+    }
 }

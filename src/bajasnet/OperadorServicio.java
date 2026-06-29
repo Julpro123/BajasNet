@@ -8,8 +8,12 @@ public class OperadorServicio {
         OperadorDB.inicializar();
     }
 
-    public static List<Operador> cargar() {
-        return OperadorDB.cargar();
+    public static List<Operador> getOperadores() {
+        return OperadorDB.getOperadores();
+    }
+
+    public static boolean hayOperadores() {
+        return !OperadorDB.getOperadores().isEmpty();
     }
 
     public static Operador buscarOperador(String email) {
@@ -36,7 +40,7 @@ public class OperadorServicio {
         return OperadorDB.buscarLogin(email, password);
     }
 
-    public static String validarDatosRegistro(String nombre, String apellido, String email, String password, String dni) {
+    public static String validarDatos(String nombre, String apellido, String email, String password, String dni) {
         if (nombre.isEmpty() || apellido.isEmpty() || email.isEmpty() || password.isEmpty() || dni.isEmpty()) {
             return "Todos los campos son requeridos.";
         }
@@ -69,7 +73,7 @@ public class OperadorServicio {
         return null;
     }
 
-    public static String validarDatosModificacion(String emailOriginal, String nombre, String apellido, String email, String password, String dni) {
+    public static String validarDatos(String emailOriginal, String nombre, String apellido, String email, String password, String dni) {
         if (nombre.isEmpty() || apellido.isEmpty() || email.isEmpty() || password.isEmpty() || dni.isEmpty()) {
             return "Todos los campos son requeridos.";
         }

@@ -26,23 +26,32 @@ public class MenuPrincipal extends JFrame {
         gbc.insets = new Insets(0, 0, 30, 0);
         panel.add(bienvenida, gbc);
 
+        int fila = 1;
+
         if (operador.isAdmin()) {
             JLabel adminLabel = new JLabel("Panel de Administración");
             adminLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
             adminLabel.setForeground(new Color(80, 100, 140));
             adminLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            gbc.gridy = 1;
+            gbc.gridy = fila++;
             gbc.insets = new Insets(0, 0, 16, 0);
             panel.add(adminLabel, gbc);
 
             JButton btnGestion = new JButton("Gestión de Operadores");
             btnGestion.setFont(new Font("SansSerif", Font.PLAIN, 13));
-            gbc.gridy = 2;
-            gbc.insets = new Insets(0, 0, 0, 0);
+            gbc.gridy = fila++;
+            gbc.insets = new Insets(0, 0, 12, 0);
             panel.add(btnGestion, gbc);
 
             btnGestion.addActionListener(e -> new MenuGestionOperadores(this).setVisible(true));
         }
+
+        JButton btnClientes = new JButton("Gestión de Clientes");
+        btnClientes.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        gbc.gridy = fila;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        panel.add(btnClientes, gbc);
+        btnClientes.addActionListener(e -> new MenuGestionClientes(this).setVisible(true));
 
         add(panel);
         setLocationRelativeTo(null);

@@ -2,7 +2,6 @@ package bajasnet;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class MenuGestionOperadores extends JFrame {
 
@@ -55,53 +54,42 @@ public class MenuGestionOperadores extends JFrame {
     }
 
     private void mostrarDialogoEliminar() {
-        List<Operador> lista = OperadorServicio.cargar();
-        if (lista.isEmpty()) {
+        if (!OperadorServicio.hayOperadores()) {
             JOptionPane.showMessageDialog(this, "No hay operadores registrados.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+        Operador[] opciones = OperadorServicio.getOperadores().toArray(new Operador[0]);
 
-        String[] opciones = lista.stream()
-            .map(o -> o.getEmail() + " — " + o.getNombre() + " " + o.getApellido())
-            .toArray(String[]::new);
-
-        String seleccion = (String) JOptionPane.showInputDialog(this,
+        Operador seleccion = (Operador) JOptionPane.showInputDialog(this,
             "Seleccioná el operador a eliminar:", "Eliminar Operador",
             JOptionPane.PLAIN_MESSAGE, null, opciones, opciones[0]);
 
         if (seleccion == null) return;
 
-        String emailSel = seleccion.split(" — ", 2)[0];
         int confirm = JOptionPane.showConfirmDialog(this,
-            "¿Eliminar al operador \"" + emailSel + "\"?", "Confirmar eliminación",
+            "¿Eliminar al operador \"" + seleccion.getEmail() + "\"?", "Confirmar eliminación",
             JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            OperadorServicio.eliminarOperador(emailSel);
+            OperadorServicio.eliminarOperador(seleccion.getEmail());
             JOptionPane.showMessageDialog(this, "Operador eliminado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     private void mostrarDialogoModificar() {
-        List<Operador> lista = OperadorServicio.cargar();
-        if (lista.isEmpty()) {
+        if (!OperadorServicio.hayOperadores()) {
             JOptionPane.showMessageDialog(this, "No hay operadores registrados.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+        Operador[] opciones = OperadorServicio.getOperadores().toArray(new Operador[0]);
 
-        String[] opciones = lista.stream().map(o -> o.getEmail() + " — " + o.getNombre() + " " + o.getApellido())
-            .toArray(String[]::new);
-
-        String seleccion = (String) JOptionPane.showInputDialog(this,
+        Operador seleccion = (Operador) JOptionPane.showInputDialog(this,
             "Seleccioná el operador a modificar:", "Modificar Operador",
             JOptionPane.PLAIN_MESSAGE, null, opciones, opciones[0]);
 
         if (seleccion == null) return;
 
-        String emailOriginal = seleccion.split(" — ", 2)[0];
-        Operador op = OperadorServicio.buscarOperador(emailOriginal);
-
-        mostrarFormulario("Modificar Operador", op);
+        mostrarFormulario("Modificar Operador", seleccion);
     }
 
     private void mostrarFormulario(String titulo, Operador opExistente) {
@@ -158,17 +146,15 @@ public class MenuGestionOperadores extends JFrame {
             String nombre  = nombreField.getText().trim();
             String apellido  = apellidoField.getText().trim();
             String email = emailField.getText().trim();
-            String password  = new String(passField.getPassword()).trim();
+            String contraseña  = new String(passField.getPassword()).trim();
             String dni  = dniField.getText().trim();
 
             String error = esNuevo
-                ? OperadorServicio.validarDatosRegistro(nombre, apellido, email, password, dni)
-                : OperadorServicio.validarDatosModificacion(emailOriginal, nombre, apellido, email, password, dni);
+                ? OperadorServicio.validarDatos(nombre, apellido, email, contraseña, dni)
+                : OperadorServicio.validarDatos(emailOriginal, nombre, apellido, email, contraseña, dni);
 
             if (error != null) {
                 errorLabel.setText(error);
-                enfocarCampoError(error, nombre, apellido, email, password, dni,
-                    nombreField, apellidoField, emailField, passField, dniField);
             } else {
                 dialog.dispose();
                 String msg = esNuevo ? "Operador creado correctamente." : "Operador modificado correctamente.";
@@ -180,24 +166,5 @@ public class MenuGestionOperadores extends JFrame {
         dialog.setMinimumSize(new Dimension(340, dialog.getHeight()));
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
-    }
-
-    private void enfocarCampoError(String error, String nombre, String apellido, String email, String password, String dni,
-            JTextField nombreField, JTextField apellidoField, JTextField emailField,
-            JPasswordField passField, JTextField dniField) {
-        JTextField foco;
-        if (error.contains("requeridos")) {
-            if (nombre.isEmpty())       foco = nombreField;
-            else if (apellido.isEmpty())  foco = apellidoField;
-            else if (email.isEmpty()) foco = emailField;
-            else if (password.isEmpty())  foco = passField;
-            else                   foco = dniField;
-        } else if (error.contains("nombre"))    foco = nombreField;
-        else if (error.contains("apellido"))    foco = apellidoField;
-        else if (error.contains("email") || error.contains("operador")) foco = emailField;
-        else if (error.contains("contraseña"))  foco = passField;
-        else                                    foco = dniField;
-        foco.requestFocusInWindow();
-        foco.selectAll();
     }
 }
