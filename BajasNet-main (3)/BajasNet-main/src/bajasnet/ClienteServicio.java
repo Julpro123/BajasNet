@@ -26,6 +26,7 @@ public class ClienteServicio {
             return "El DNI debe tener 7 u 8 dígitos numéricos.";
         }
         if (!email.matches("^[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}$")) {
+
             return "El email no tiene un formato válido.";
         }
         String dominio = email.substring(email.indexOf("@") + 1).toLowerCase();

@@ -103,5 +103,6 @@ public class LoginForm extends JFrame {
         }
         dispose();
         new MenuPrincipal(op).setVisible(true);
+        new MenuPrincipal(op).setVisible(true);
     }
 }

@@ -1,4 +1,5 @@
 package bajasnet;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -27,6 +28,7 @@ public class MenuPrincipal extends JFrame {
             dispose();
             new LoginForm().setVisible(true);
         });
+
         headerPanel.add(btnCerrarSesion, BorderLayout.EAST);
         contenedor.add(headerPanel, BorderLayout.NORTH);
 
@@ -43,36 +45,49 @@ public class MenuPrincipal extends JFrame {
         bienvenida.setFont(new Font("SansSerif", Font.BOLD, 20));
         bienvenida.setForeground(new Color(30, 40, 60));
         bienvenida.setHorizontalAlignment(SwingConstants.CENTER);
+
         gbc.gridy = 0;
         gbc.insets = new Insets(0, 0, 30, 0);
         panel.add(bienvenida, gbc);
 
         int fila = 1;
 
-        if (operador.isAdmin()) {
-            JLabel adminLabel = new JLabel("Panel de Administración");
-            adminLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-            adminLabel.setForeground(new Color(80, 100, 140));
-            adminLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            gbc.gridy = fila++;
-            gbc.insets = new Insets(0, 0, 16, 0);
-            panel.add(adminLabel, gbc);
-
-            JButton btnGestion = new JButton("Gestión de Operadores");
-            btnGestion.setFont(new Font("SansSerif", Font.PLAIN, 13));
-            gbc.gridy = fila++;
-            gbc.insets = new Insets(0, 0, 12, 0);
-            panel.add(btnGestion, gbc);
-
-            btnGestion.addActionListener(e -> new MenuGestionOperadores(this).setVisible(true));
-        }
-
+        // Gestión de Clientes (todos)
         JButton btnClientes = new JButton("Gestión de Clientes");
         btnClientes.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        gbc.gridy = fila;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.gridy = fila++;
+        gbc.insets = new Insets(0, 0, 10, 0);
         panel.add(btnClientes, gbc);
-        btnClientes.addActionListener(e -> new MenuGestionClientes(this).setVisible(true));
+
+        btnClientes.addActionListener(e ->
+                new MenuGestionClientes(this).setVisible(true)
+        );
+
+        // Gestión de Operadores (solo administrador)
+        if (operador.isAdmin()) {
+            JButton btnOperadores = new JButton("Gestión de Operadores");
+            btnOperadores.setFont(new Font("SansSerif", Font.PLAIN, 13));
+
+            gbc.gridy = fila++;
+            gbc.insets = new Insets(0, 0, 10, 0);
+            panel.add(btnOperadores, gbc);
+
+            btnOperadores.addActionListener(e ->
+                    new MenuGestionOperadores(this).setVisible(true)
+            );
+        }
+
+        // Promociones (todos)
+        JButton btnPromociones = new JButton("Promociones");
+        btnPromociones.setFont(new Font("SansSerif", Font.PLAIN, 13));
+
+        gbc.gridy = fila++;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        panel.add(btnPromociones, gbc);
+
+        btnPromociones.addActionListener(e ->
+                new MenuGestionPromocion(operador).setVisible(true)
+        );
 
         contenedor.add(panel, BorderLayout.CENTER);
         add(contenedor);
