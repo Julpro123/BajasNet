@@ -9,6 +9,27 @@ public class MenuPrincipal extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(500, 400);
 
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(new Color(245, 247, 250));
+
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 12));
+
+        JButton btnCerrarSesion = new JButton("Cerrar Sesión");
+        btnCerrarSesion.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btnCerrarSesion.setBackground(new Color(200, 40, 40));
+        btnCerrarSesion.setForeground(Color.WHITE);
+        btnCerrarSesion.setOpaque(true);
+        btnCerrarSesion.setBorderPainted(false);
+        btnCerrarSesion.setFocusPainted(false);
+        btnCerrarSesion.addActionListener(e -> {
+            dispose();
+            new LoginForm().setVisible(true);
+        });
+        headerPanel.add(btnCerrarSesion, BorderLayout.EAST);
+        contenedor.add(headerPanel, BorderLayout.NORTH);
+
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(245, 247, 250));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
@@ -53,7 +74,8 @@ public class MenuPrincipal extends JFrame {
         panel.add(btnClientes, gbc);
         btnClientes.addActionListener(e -> new MenuGestionClientes(this).setVisible(true));
 
-        add(panel);
+        contenedor.add(panel, BorderLayout.CENTER);
+        add(contenedor);
         setLocationRelativeTo(null);
     }
 }

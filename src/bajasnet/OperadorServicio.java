@@ -4,16 +4,8 @@ import java.util.List;
 
 public class OperadorServicio {
 
-    public static void inicializar() {
-        OperadorDB.inicializar();
-    }
-
-    public static List<Operador> getOperadores() {
-        return OperadorDB.getOperadores();
-    }
-
-    public static boolean hayOperadores() {
-        return !OperadorDB.getOperadores().isEmpty();
+    public static List<Operador> listarOperadores() {
+        return OperadorDB.listarOperadores();
     }
 
     public static Operador buscarOperador(String email) {

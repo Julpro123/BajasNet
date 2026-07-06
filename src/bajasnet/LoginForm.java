@@ -1,6 +1,6 @@
 package bajasnet;
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
 
 public class LoginForm extends JFrame {
 
@@ -93,8 +93,7 @@ public class LoginForm extends JFrame {
     }
 
     private void iniciarSesion() {
-        Operador op = OperadorServicio.validarLogin(emailField.getText().trim(),
-            new String(passwordField.getPassword()).trim());
+        Operador op = OperadorServicio.validarLogin(emailField.getText().trim(), new String(passwordField.getPassword()).trim());
         if (op == null) {
             JOptionPane.showMessageDialog(this,
                 "Email o contraseña incorrectos.",

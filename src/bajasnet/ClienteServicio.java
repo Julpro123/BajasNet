@@ -3,16 +3,8 @@ import java.util.List;
 
 public class ClienteServicio {
 
-    public static void inicializar() {
-        ClienteDB.inicializar();
-    }
-
-    public static List<Cliente> getClientes() {
-        return ClienteDB.getClientes();
-    }
-
-    public static boolean hayClientes() {
-        return !ClienteDB.getClientes().isEmpty();
+    public static List<Cliente> listarClientes() {
+        return ClienteDB.listarClientes();
     }
 
     public static Cliente buscarCliente(int id) {
