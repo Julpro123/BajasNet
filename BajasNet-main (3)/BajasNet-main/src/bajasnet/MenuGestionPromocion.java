@@ -44,14 +44,12 @@ public class MenuGestionPromocion extends JFrame {
         JButton btnEditar = new JButton("Editar");
         JButton btnEliminar = new JButton("Eliminar");
         JButton btnAsignar = new JButton("Asignar a Cliente");
-        JButton btnActualizar = new JButton("Actualizar");
         JButton btnVolver = new JButton("Volver");
 
         panelBotones.add(btnNueva);
         panelBotones.add(btnEditar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnAsignar);
-        panelBotones.add(btnActualizar);
         panelBotones.add(btnVolver);
 
         add(panelBotones, BorderLayout.SOUTH);
@@ -66,7 +64,6 @@ public class MenuGestionPromocion extends JFrame {
         btnNueva.addActionListener(e -> nuevaPromocion());
         btnEditar.addActionListener(e -> editarPromocion());
         btnEliminar.addActionListener(e -> eliminarPromocion());
-        btnActualizar.addActionListener(e -> cargarTabla());
 
         btnAsignar.addActionListener(e -> asignarPromocion());
 
