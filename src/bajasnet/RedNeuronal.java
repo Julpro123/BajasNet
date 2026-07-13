@@ -11,262 +11,248 @@ import org.neuroph.nnet.learning.*;
 public class RedNeuronal {
 
     static final double UMBRAL = 0.45;
+    static final Random RND = new Random(42);
 
     public static void main(String[] args) throws IOException {
+        List<String[]> filas = cargarCsv("DatasetTelcoChurn.csv");
+        String[] header = filas.remove(0);
 
-        // ---------- 1. LEER EL CSV ----------
-        List<String> lineas = Files.readAllLines(Paths.get("DatasetTelcoChurn.csv"));
-        String[] header = lineas.get(0).split(",", -1);
-        int nCols = header.length;
+        Pre pre = new Pre(header, filas);
+        System.out.println("Entradas: " + pre.nEntradas);
 
-        int idxCustomerID = indiceDe(header, "customerID");
-        int idxChurn = indiceDe(header, "Churn");
-        if (idxChurn == -1)
-            throw new RuntimeException("No se encontró la columna 'Churn' en el header.");
+        DataSet[] split = pre.construirDataSets(filas);
+        DataSet train = balancear(split[0], pre.nEntradas);
+        DataSet test = split[1];
 
-        List<Integer> colsFeature = new ArrayList<>();
-        for (int c = 0; c < nCols; c++) {
-            if (c != idxCustomerID && c != idxChurn) colsFeature.add(c);
+        NeuralNetwork red = entrenar(train, pre.nEntradas);
+        red.save("redEntrenada.nnet");
+        pre.guardar("preprocesamiento.txt");
+
+        evaluar(red, test);
+    }
+
+    // ---- Carga ----
+
+    static List<String[]> cargarCsv(String archivo) throws IOException {
+        List<String[]> out = new ArrayList<>();
+        for (String linea : Files.readAllLines(Paths.get(archivo))) {
+            if (linea.trim().isEmpty()) continue;
+            out.add(linea.split(",", -1));
         }
-        int nFeat = colsFeature.size();
+        return out;
+    }
 
-        List<String[]> featuresCrudas = new ArrayList<>();
-        List<Integer> targets = new ArrayList<>();
-        for (int i = 1; i < lineas.size(); i++) {
-            if (lineas.get(i).trim().isEmpty()) continue;
-            String[] fila = lineas.get(i).split(",", -1);
-            if (fila.length != nCols) continue;   
+    // ---- Preprocesamiento (una sola clase con todo el estado) ----
 
-            String[] feats = new String[nFeat];
+    static class Pre {
+        final String[] nombres;      // nombre de cada feature
+        final boolean[] numerica;
+        final List<List<String>> vocab = new ArrayList<>();
+        final double[] min, max;
+        final int nEntradas;
+        final int nCols;
+        final int idxChurn, idxId;
+
+        Pre(String[] header, List<String[]> filas) {
+            nCols = header.length;
+            idxChurn = indiceDe(header, "Churn");
+            idxId = indiceDe(header, "customerID");
+            if (idxChurn == -1) throw new RuntimeException("Falta columna 'Churn'.");
+
+            // columnas de entrada = todas menos id y churn
+            List<Integer> cols = new ArrayList<>();
+            for (int c = 0; c < nCols; c++)
+                if (c != idxId && c != idxChurn) cols.add(c);
+
+            int nFeat = cols.size();
+            nombres = new String[nFeat];
+            numerica = new boolean[nFeat];
+            min = new double[nFeat];
+            max = new double[nFeat];
+            Arrays.fill(min, Double.MAX_VALUE);
+            Arrays.fill(max, -Double.MAX_VALUE);
+
             for (int k = 0; k < nFeat; k++) {
-                String v = fila[colsFeature.get(k)].trim();
-                feats[k] = v.isEmpty() ? "0" : v;  
+                int col = cols.get(k);
+                nombres[k] = header[col].trim();
+                numerica[k] = true;
+                LinkedHashSet<String> cats = new LinkedHashSet<>();
+
+                for (String[] fila : filas) {
+                    if (fila.length != nCols) continue;
+                    String v = valor(fila, col);
+                    if (esDouble(v)) {
+                        double d = Double.parseDouble(v);
+                        min[k] = Math.min(min[k], d);
+                        max[k] = Math.max(max[k], d);
+                    } else {
+                        numerica[k] = false;
+                    }
+                    cats.add(v);
+                }
+                vocab.add(numerica[k] ? List.of() : new ArrayList<>(cats));
             }
-            featuresCrudas.add(feats);
 
-            targets.add(fila[idxChurn].trim().equalsIgnoreCase("Yes") ? 1 : 0);
+            int n = 0;
+            for (int k = 0; k < nFeat; k++)
+                n += numerica[k] ? 1 : vocab.get(k).size();
+            nEntradas = n;
         }
 
-        boolean[] esNumerica = new boolean[nFeat];
-        List<List<String>> categorias = new ArrayList<>();  
-        for (int k = 0; k < nFeat; k++) {
-            boolean numerica = true;
-            for (String[] feats : featuresCrudas) {
-                if (!esDouble(feats[k])) { numerica = false; break; }
+        DataSet[] construirDataSets(List<String[]> filas) {
+            List<String[]> validas = new ArrayList<>();
+            for (String[] f : filas) if (f.length == nCols) validas.add(f);
+            Collections.shuffle(validas, new Random(42));
+            int corte = (int) Math.round(validas.size() * 0.8);
+
+            DataSet train = new DataSet(nEntradas, 1);
+            DataSet test = new DataSet(nEntradas, 1);
+            for (int i = 0; i < validas.size(); i++) {
+                String[] f = validas.get(i);
+                double target = f[idxChurn].trim().equalsIgnoreCase("Yes") ? 1 : 0;
+                (i < corte ? train : test).add(vectorizar(f), new double[]{ target });
             }
-            esNumerica[k] = numerica;
+            return new DataSet[]{ train, test };
+        }
 
-            List<String> vocab = new ArrayList<>();
-            if (!numerica) {
-                LinkedHashSet<String> set = new LinkedHashSet<>();
-                for (String[] feats : featuresCrudas) set.add(feats[k]);
-                vocab.addAll(set);
+        double[] vectorizar(String[] fila) {
+            double[] v = new double[nEntradas];
+            int idx = 0, k = 0;
+            for (int c = 0; c < nCols; c++) {
+                if (c == idxId || c == idxChurn) continue;
+                String val = valor(fila, c);
+                if (numerica[k]) {
+                    double d = esDouble(val) ? Double.parseDouble(val) : 0;
+                    double rango = max[k] - min[k];
+                    v[idx++] = rango == 0 ? 0 : (d - min[k]) / rango;
+                } else {
+                    List<String> cats = vocab.get(k);
+                    int pos = cats.indexOf(val);
+                    for (int j = 0; j < cats.size(); j++)
+                        v[idx++] = (j == pos) ? 1.0 : 0.0;
+                }
+                k++;
             }
-            categorias.add(vocab);
+            return v;
         }
 
-        int nEntradas = 0;
-        for (int k = 0; k < nFeat; k++) {
-            nEntradas += esNumerica[k] ? 1 : categorias.get(k).size();
+        void guardar(String archivo) {
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
+                for (int k = 0; k < nombres.length; k++) {
+                    bw.write(numerica[k]
+                        ? "NUM|" + nombres[k] + "|" + min[k] + "|" + max[k]
+                        : "CAT|" + nombres[k] + "|" + String.join(";", vocab.get(k)));
+                    bw.newLine();
+                }
+            } catch (IOException e) { e.printStackTrace(); }
         }
 
-        List<Integer> orden = new ArrayList<>();
-        for (int i = 0; i < featuresCrudas.size(); i++) orden.add(i);
-        Collections.shuffle(orden, new Random(42));
-        int corte = (int) Math.round(orden.size() * 0.8);
-        List<Integer> idxTrain = new ArrayList<>(orden.subList(0, corte));
-        List<Integer> idxTest  = new ArrayList<>(orden.subList(corte, orden.size()));
-
-        double[] min = new double[nFeat];
-        double[] max = new double[nFeat];
-        Arrays.fill(min, Double.MAX_VALUE);
-        Arrays.fill(max, -Double.MAX_VALUE);
-        for (int i : idxTrain) {
-            String[] feats = featuresCrudas.get(i);
-            for (int k = 0; k < nFeat; k++) {
-                if (!esNumerica[k]) continue;
-                double val = Double.parseDouble(feats[k]);
-                if (val < min[k]) min[k] = val;
-                if (val > max[k]) max[k] = val;
-            }
+        private String valor(String[] fila, int col) {
+            String v = fila[col].trim();
+            return v.isEmpty() ? "0" : v;
         }
+    }
 
-        DataSet train = new DataSet(nEntradas, 1);
-        DataSet test  = new DataSet(nEntradas, 1);
-        for (int i : idxTrain)
-            train.add(vectorizar(featuresCrudas.get(i), esNumerica, categorias, min, max, nEntradas),
-                      new double[]{ targets.get(i) });
-        for (int i : idxTest)
-            test.add(vectorizar(featuresCrudas.get(i), esNumerica, categorias, min, max, nEntradas),
-                     new double[]{ targets.get(i) });
+    // ---- Balanceo (oversampling de la clase minoritaria) ----
 
-        List<DataSetRow> pos = new ArrayList<>();
-        List<DataSetRow> neg = new ArrayList<>();
-        for (DataSetRow r : train.getRows()) {
-            if (r.getDesiredOutput()[0] >= 0.5) pos.add(r); else neg.add(r);
+    static DataSet balancear(DataSet train, int nEntradas) {
+        List<DataSetRow> pos = new ArrayList<>(), neg = new ArrayList<>();
+        for (DataSetRow r : train.getRows())
+            (r.getDesiredOutput()[0] >= 0.5 ? pos : neg).add(r);
+
+        DataSet bal = new DataSet(nEntradas, 1);
+        for (DataSetRow r : neg) bal.add(r.getInput(), r.getDesiredOutput());
+        for (int i = 0; i < neg.size() && !pos.isEmpty(); i++) {
+            DataSetRow r = pos.get(RND.nextInt(pos.size()));
+            bal.add(r.getInput(), r.getDesiredOutput());
         }
-        DataSet trainBal = new DataSet(nEntradas, 1);
-        for (DataSetRow r : neg) trainBal.add(r.getInput(), r.getDesiredOutput());
-        Random rnd = new Random(42);
-        for (int k = 0; k < neg.size() && !pos.isEmpty(); k++) {
-            DataSetRow r = pos.get(rnd.nextInt(pos.size()));   
-            trainBal.add(r.getInput(), r.getDesiredOutput());
-        }
-        trainBal.shuffle();
-        System.out.println("Entradas: " + nEntradas
-                + " | Train: " + train.size() + " -> balanceado: " + trainBal.size()
-                + " (neg=" + neg.size() + ", pos original=" + pos.size() + ")");
+        bal.shuffle();
+        System.out.println("Train balanceado: " + bal.size()
+                + " (neg=" + neg.size() + ", pos=" + pos.size() + ")");
+        return bal;
+    }
 
+    // ---- Entrenamiento ----
+
+    static NeuralNetwork entrenar(DataSet train, int nEntradas) {
         NeuralNetwork red = new MultiLayerPerceptron(nEntradas, 8, 4, 1);
-
         MomentumBackpropagation regla = new MomentumBackpropagation();
         regla.setMaxIterations(3000);
         regla.setLearningRate(0.05);
         regla.setMomentum(0.7);
         regla.setMaxError(0.05);
-        regla.addListener(event -> {
-            MomentumBackpropagation bp = (MomentumBackpropagation) event.getSource();
-            if (bp.getCurrentIteration() % 200 == 0) {
-                System.out.println("Iteración: " + bp.getCurrentIteration()
-                        + " | Error: " + bp.getTotalNetworkError());
-            }
+        regla.addListener(e -> {
+            MomentumBackpropagation bp = (MomentumBackpropagation) e.getSource();
+            if (bp.getCurrentIteration() % 200 == 0)
+                System.out.println("Iter " + bp.getCurrentIteration()
+                        + " | Error " + bp.getTotalNetworkError());
         });
         red.setLearningRule(regla);
 
-        long inicio = System.currentTimeMillis();
-        red.learn(trainBal);
-        long fin = System.currentTimeMillis();
-        System.out.println("Entrenamiento terminado en " + (fin - inicio) / 1000.0 + " s.");
-        System.out.println("Error final: " + regla.getTotalNetworkError()
-                + " | Iteraciones: " + regla.getCurrentIteration());
-
-        red.save("redEntrenada.nnet");
-        guardarPreprocesamiento("preprocesamiento.txt", header, colsFeature, esNumerica, categorias, min, max);
-
+        long t = System.currentTimeMillis();
+        red.learn(train);
+        System.out.printf("Entrenado en %.1fs | error %.4f%n",
+                (System.currentTimeMillis() - t) / 1000.0, regla.getTotalNetworkError());
+        return red;
+    }
+    
+    static void evaluar(NeuralNetwork red, DataSet test) {
         int tp = 0, tn = 0, fp = 0, fn = 0;
-        double sumSq = 0, sumAbs = 0, sumReal = 0, sumPred = 0;
-        double sumRealPred = 0, sumRealSq = 0, sumPredSq = 0;
-        int n = test.getRows().size();
+        double sumSq = 0, sumAbs = 0, sumReal = 0, sumPred = 0,
+               sumRP = 0, sumRSq = 0, sumPSq = 0;
+        int n = test.size();
 
-        List<double[]> paresTest = new ArrayList<>(); // {predichoContinuo, real}
         for (DataSetRow fila : test.getRows()) {
             red.setInput(fila.getInput());
             red.calculate();
-            double predContinuo = red.getOutput()[0];   // salida cruda 0..1
-            double real = fila.getDesiredOutput()[0];    // 0 o 1
-            paresTest.add(new double[]{ predContinuo, real });
+            double pred = red.getOutput()[0];
+            double real = fila.getDesiredOutput()[0];
 
-            double err = real - predContinuo;
-            sumSq  += err * err;
-            sumAbs += Math.abs(err);
-            sumReal += real;
-            sumPred += predContinuo;
-            sumRealPred += real * predContinuo;
-            sumRealSq   += real * real;
-            sumPredSq   += predContinuo * predContinuo;
+            double err = real - pred;
+            sumSq += err * err; sumAbs += Math.abs(err);
+            sumReal += real; sumPred += pred;
+            sumRP += real * pred; sumRSq += real * real; sumPSq += pred * pred;
 
-            int predicho = predContinuo >= UMBRAL ? 1 : 0;
-            int realInt  = (int) Math.round(real);
-            if (predicho == 1 && realInt == 1) tp++;
-            else if (predicho == 0 && realInt == 0) tn++;
-            else if (predicho == 1 && realInt == 0) fp++;
+            int p = pred >= UMBRAL ? 1 : 0, rr = (int) Math.round(real);
+            if (p == 1 && rr == 1) tp++;
+            else if (p == 0 && rr == 0) tn++;
+            else if (p == 1) fp++;
             else fn++;
         }
 
-        double mse  = sumSq / n;
-        double rmse = Math.sqrt(mse);
-        double mae  = sumAbs / n;
+        double acc = 100.0 * (tp + tn) / n;
+        double prec = tp + fp == 0 ? 0 : 100.0 * tp / (tp + fp);
+        double rec = tp + fn == 0 ? 0 : 100.0 * tp / (tp + fn);
+        double f1 = prec + rec == 0 ? 0 : 2 * prec * rec / (prec + rec);
 
         double mediaReal = sumReal / n;
         double ssTot = 0;
-        for (double[] par : paresTest) {
-            double d = par[1] - mediaReal;
+        for (DataSetRow fila : test.getRows()) {
+            double d = fila.getDesiredOutput()[0] - mediaReal;
             ssTot += d * d;
         }
-        double r2 = ssTot == 0 ? 0 : 1 - (sumSq / ssTot);
+        double r2 = ssTot == 0 ? 0 : 1 - sumSq / ssTot;
+        double denom = Math.sqrt((n * sumRSq - sumReal * sumReal) * (n * sumPSq - sumPred * sumPred));
+        double r = denom == 0 ? 0 : (n * sumRP - sumReal * sumPred) / denom;
 
-        double numer = n * sumRealPred - sumReal * sumPred;
-        double denom = Math.sqrt((n * sumRealSq - sumReal * sumReal) * (n * sumPredSq - sumPred * sumPred));
-        double r = denom == 0 ? 0 : numer / denom;
-
-        int total = tp + tn + fp + fn;
-        double accuracy  = 100.0 * (tp + tn) / total;
-        double precision = (tp + fp) == 0 ? 0 : 100.0 * tp / (tp + fp);
-        double recall    = (tp + fn) == 0 ? 0 : 100.0 * tp / (tp + fn);
-        double f1        = (precision + recall) == 0 ? 0 : 2 * precision * recall / (precision + recall);
-
-        System.out.println("\n---- RESULTADOS EN TEST (umbral " + UMBRAL + ") ----");
-        System.out.println("Matriz de confusión:");
-        System.out.println("             Pred NO   Pred SI");
-        System.out.println("Real NO   |  " + tn + "        " + fp);
-        System.out.println("Real SI   |  " + fn + "        " + tp);
-        System.out.printf("Accuracy : %.2f%%%n", accuracy);
-        System.out.printf("Precision: %.2f%% (de los que predijo churn, cuántos lo eran)%n", precision);
-        System.out.printf("Recall   : %.2f%% (de los churn reales, cuántos detectó)%n", recall);
-        System.out.printf("F1-score : %.2f%%%n", f1);
-
-        System.out.println("\n---- MÉTRICAS DE ERROR ----");
-        System.out.printf("MSE : %.4f  (Exc<0.01 | Bueno<0.05 | Reg<0.15 | Malo>0.15)%n", mse);
-        System.out.printf("RMSE: %.4f  (Exc<0.10 | Bueno<0.25 | Reg<0.40 | Malo>0.40)%n", rmse);
-        System.out.printf("MAE : %.4f  (Exc<0.10 | Bueno<0.20 | Reg<0.30 | Malo>0.30)%n", mae);
-        System.out.printf("R2  : %.4f  (1 - SSres/SStot)%n", r2);
-        System.out.printf("r   : %.4f  (correlación de Pearson pred vs real)%n", r);
+        System.out.println("\n---- TEST (umbral " + UMBRAL + ") ----");
+        System.out.println("           Pred NO   Pred SI");
+        System.out.println("Real NO  |  " + tn + "        " + fp);
+        System.out.println("Real SI  |  " + fn + "        " + tp);
+        System.out.printf("Accuracy %.2f%% | Precision %.2f%% | Recall %.2f%% | F1 %.2f%%%n",
+                acc, prec, rec, f1);
+        System.out.printf("MSE %.4f | RMSE %.4f | MAE %.4f | R2 %.4f | r %.4f%n",
+                sumSq / n, Math.sqrt(sumSq / n), sumAbs / n, r2, r);
     }
-
-    // ---------- Helpers ----------
-
-    private static int indiceDe(String[] header, String nombre) {
-        for (int i = 0; i < header.length; i++) {
+    
+    static int indiceDe(String[] header, String nombre) {
+        for (int i = 0; i < header.length; i++)
             if (header[i].trim().equalsIgnoreCase(nombre)) return i;
-        }
         return -1;
     }
 
-    private static boolean esDouble(String s) {
-        try {
-            Double.parseDouble(s);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-
-    /** Convierte una fila cruda en el vector de entrada: numéricas normalizadas + categóricas en one-hot. */
-    private static double[] vectorizar(String[] feats, boolean[] esNumerica, List<List<String>> categorias,
-                                       double[] min, double[] max, int nEntradas) {
-        double[] v = new double[nEntradas];
-        int idx = 0;
-        for (int k = 0; k < feats.length; k++) {
-            if (esNumerica[k]) {
-                double val = Double.parseDouble(feats[k]);
-                double rango = max[k] - min[k];
-                v[idx++] = rango == 0 ? 0 : (val - min[k]) / rango;
-            } else {
-                List<String> vocab = categorias.get(k);
-                int pos = vocab.indexOf(feats[k]);          // -1 si es una categoría no vista
-                for (int j = 0; j < vocab.size(); j++) {
-                    v[idx++] = (j == pos) ? 1.0 : 0.0;
-                }
-            }
-        }
-        return v;
-    }
-
-    /** Guarda tipos, vocabularios y min/max para reproducir el mismo preprocesamiento al predecir. */
-    private static void guardarPreprocesamiento(String archivo, String[] header, List<Integer> colsFeature,
-            boolean[] esNumerica, List<List<String>> categorias, double[] min, double[] max) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
-            for (int k = 0; k < colsFeature.size(); k++) {
-                String nombre = header[colsFeature.get(k)].trim();
-                if (esNumerica[k]) {
-                    bw.write("NUM|" + nombre + "|" + min[k] + "|" + max[k]);
-                } else {
-                    bw.write("CAT|" + nombre + "|" + String.join(";", categorias.get(k)));
-                }
-                bw.newLine();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    static boolean esDouble(String s) {
+        try { Double.parseDouble(s); return true; }
+        catch (NumberFormatException e) { return false; }
     }
 }

@@ -8,11 +8,6 @@ public class ClienteDB {
     private static final String ARCHIVO = "clientes.txt";
     private static final int CANTIDAD_CAMPOS = 20;
 
-    /**
-     * Importa todos los clientes de un CSV del dataset Telco (customerID + 19 features + Churn).
-     * Toma customerID y las 19 features (descarta Churn) y los agrega a clientes.txt.
-     * No duplica los que ya existan (por customerID). Devuelve cuántos nuevos importó.
-     */
     public static int importarDesdeCsv(String csvArchivo) {
         int importados = 0;
         try {

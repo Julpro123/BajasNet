@@ -70,7 +70,6 @@ public class Cliente {
     public String getCargosMensuales()       { return cargosMensuales; }
     public String getCargosTotales()         { return cargosTotales; }
 
-    /** Devuelve todos los campos en el orden usado para persistencia y tabla. */
     public String[] toArray() {
         return new String[] {
             idCliente, genero, ciudadanoMayor, pareja, dependientes, antiguedad, servicioTelefonico,

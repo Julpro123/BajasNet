@@ -62,24 +62,6 @@ public class MenuGestionClientes extends JFrame {
         btnVolver.addActionListener(e -> dispose());
         headerPanel.add(btnVolver, BorderLayout.EAST);
 
-        JButton btnImportar = new JButton("Importar del CSV");
-        btnImportar.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        btnImportar.addActionListener(e -> {
-            try {
-                int confirm = JOptionPane.showConfirmDialog(this,
-                    "¿Importar todos los clientes de DatasetTelcoChurn.csv?\n(No se duplican los que ya existan.)",
-                    "Importar clientes", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    int n = ClienteServicio.importarClientesCsv();
-                    actualizarTabla();
-                    JOptionPane.showMessageDialog(this, "Se importaron " + n + " clientes nuevos.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Error inesperado: " + ex, "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        headerPanel.add(btnImportar, BorderLayout.WEST);
 
         panel.add(headerPanel, BorderLayout.NORTH);
 
@@ -413,19 +395,18 @@ public class MenuGestionClientes extends JFrame {
             JOptionPane.showMessageDialog(this, "Seleccioná un cliente de la tabla para predecir.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        String idCliente = getValorComponente(detFields[0]);
-        Cliente c = ClienteServicio.buscarCliente(idCliente);
-        if (c == null) {
-            JOptionPane.showMessageDialog(this, "No se encontró el cliente seleccionado.", "Info", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+
+        String[] v = valoresDetalle();
+        String idCliente = v[0];
+        Cliente c = new Cliente(v[0],v[1], v[2], v[3], v[4], v[5], v[6], v[7],
+                v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]);
 
         double prob = PrediccionServicio.predecirChurn(c);
         JOptionPane.showMessageDialog(this,
             String.format("Cliente: %s%n%nProbabilidad de baja (churn): %.1f%%%nRiesgo: %s%n%n%s",
                 idCliente, prob * 100, PrediccionServicio.nivelRiesgo(prob), PrediccionServicio.recomendacion(prob)),
             "Predicción de Churn", JOptionPane.INFORMATION_MESSAGE);
-    }
+}
 
     private void iniciarCreacion() {
         tabla.clearSelection();

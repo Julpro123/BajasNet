@@ -133,7 +133,7 @@ public class ClienteServicio {
         return ClienteDB.eliminarCliente(idCliente);
     }
 
-    /** Importa todos los clientes del dataset Telco. Devuelve cuántos nuevos se agregaron. */
+    
     public static int importarClientesCsv() {
         return ClienteDB.importarDesdeCsv("DatasetTelcoChurn.csv");
     }

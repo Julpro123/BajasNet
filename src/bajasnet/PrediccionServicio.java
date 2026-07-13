@@ -13,7 +13,6 @@ public class PrediccionServicio {
     private static NeuralNetwork red;
     private static List<String[]> preproc;   // una entrada por feature, en orden: {tipo, nombre, ...}
 
-    /** Carga la red y el preprocesamiento una sola vez (la primera que se predice). */
     private static void cargar() throws IOException {
         if (red != null) return;
         if (!Files.exists(Paths.get(ARCHIVO_RED)) || !Files.exists(Paths.get(ARCHIVO_PREPROC))) {
@@ -28,10 +27,7 @@ public class PrediccionServicio {
         }
     }
 
-    /**
-     * Probabilidad de churn (0..1) para un cliente, aplicándole el mismo
-     * preprocesamiento (one-hot + normalización) que se usó al entrenar.
-     */
+   
     public static double predecirChurn(Cliente cliente) throws IOException {
         cargar();
         double[] entrada = vectorizar(cliente.toArray());
@@ -40,7 +36,7 @@ public class PrediccionServicio {
         return red.getOutput()[0];
     }
 
-    // datosCliente[0] es el idCliente; las features van en datosCliente[1..], en el mismo orden que preproc.
+    
     private static double[] vectorizar(String[] datosCliente) {
         List<Double> v = new ArrayList<>();
         for (int k = 0; k < preproc.size(); k++) {
@@ -55,7 +51,7 @@ public class PrediccionServicio {
                 double val;
                 try { val = Double.parseDouble(valor); } catch (NumberFormatException e) { val = 0; }
                 v.add(rango == 0 ? 0 : (val - min) / rango);
-            } else { // CAT (one-hot con el vocabulario guardado)
+            } else { 
                 String[] vocab = (p.length > 2 && !p[2].isEmpty()) ? p[2].split(";", -1) : new String[0];
                 for (String cat : vocab) v.add(cat.equals(valor) ? 1.0 : 0.0);
             }
