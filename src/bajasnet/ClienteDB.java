@@ -1,20 +1,60 @@
 package bajasnet;
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 public class ClienteDB {
 
     private static final String ARCHIVO = "clientes.txt";
+    private static final int CANTIDAD_CAMPOS = 20;
+
+    /**
+     * Importa todos los clientes de un CSV del dataset Telco (customerID + 19 features + Churn).
+     * Toma customerID y las 19 features (descarta Churn) y los agrega a clientes.txt.
+     * No duplica los que ya existan (por customerID). Devuelve cuántos nuevos importó.
+     */
+    public static int importarDesdeCsv(String csvArchivo) {
+        int importados = 0;
+        try {
+            Set<String> existentes = new HashSet<>();
+            for (Cliente c : listarClientes()) existentes.add(c.getIdCliente());
+
+            List<String> lineas = Files.readAllLines(Paths.get(csvArchivo));
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(ARCHIVO, true))) {
+                for (int i = 1; i < lineas.size(); i++) {   // i=0 es el header
+                    String linea = lineas.get(i).trim();
+                    if (linea.isEmpty()) continue;
+                    String[] c = linea.split(",", -1);
+                    if (c.length < CANTIDAD_CAMPOS) continue;   // fila malformada
+
+                    String id = c[0].trim();
+                    if (id.isEmpty() || existentes.contains(id)) continue;
+
+                    String[] campos = new String[CANTIDAD_CAMPOS];   // customerID + 19 features (sin Churn)
+                    for (int k = 0; k < CANTIDAD_CAMPOS; k++) {
+                        String v = c[k].trim();
+                        campos[k] = v.isEmpty() ? "0" : v;           // hueco (TotalCharges) -> 0
+                    }
+                    bw.write(String.join("|", campos));
+                    bw.newLine();
+                    existentes.add(id);
+                    importados++;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return importados;
+    }
 
     public static List<Cliente> listarClientes() {
         List<Cliente> resultado = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6) {
-                    resultado.add(new Cliente(Integer.parseInt(campos[0]),
-                        campos[1], campos[2], campos[3], campos[4], campos[5]));
+                String[] c = linea.split("\\|", -1);
+                if (c.length == CANTIDAD_CAMPOS) {
+                    resultado.add(crearCliente(c));
                 }
             }
         } catch (Exception e) {
@@ -23,74 +63,39 @@ public class ClienteDB {
         return resultado;
     }
 
-    public static Cliente buscarCliente(int id) {
+    public static Cliente buscarCliente(String idCliente) {
         try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6 && Integer.parseInt(campos[0]) == id) {
-                    return new Cliente(Integer.parseInt(campos[0]),
-                        campos[1], campos[2], campos[3], campos[4], campos[5]);
+                String[] c = linea.split("\\|", -1);
+                if (c.length == CANTIDAD_CAMPOS && c[0].equals(idCliente)) {
+                    return crearCliente(c);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static Cliente buscarClientePorDni(String dni) {
-        try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6 && campos[3].equals(dni)) {
-                    return new Cliente(Integer.parseInt(campos[0]),
-                        campos[1], campos[2], campos[3], campos[4], campos[5]);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static int generarId() {
-        int maxId = 0;
-        try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6) {
-                    maxId = Math.max(maxId, Integer.parseInt(campos[0]));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return maxId + 1;
     }
 
     public static void registrarCliente(Cliente c) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(ARCHIVO, true))) {
-            bw.write(c.getId() + "|" + c.getNombre() + "|" + c.getApellido() + "|" +
-                     c.getDni() + "|" + c.getEmail() + "|" + c.getTelefono());
+            bw.write(lineaDeCliente(c));
             bw.newLine();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void modificarCliente(int idOriginal, Cliente nuevo) {
+    public static void modificarCliente(String idOriginal, Cliente nuevo) {
         List<String> lineas = new ArrayList<>();
         boolean encontrado = false;
         try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6 && Integer.parseInt(campos[0]) == idOriginal) {
-                    lineas.add(nuevo.getId() + "|" + nuevo.getNombre() + "|" + nuevo.getApellido() + "|" +
-                               nuevo.getDni() + "|" + nuevo.getEmail() + "|" + nuevo.getTelefono());
+                String[] c = linea.split("\\|", -1);
+                if (c.length == CANTIDAD_CAMPOS && c[0].equals(idOriginal)) {
+                    lineas.add(lineaDeCliente(nuevo));
                     encontrado = true;
                 } else {
                     lineas.add(linea);
@@ -113,14 +118,14 @@ public class ClienteDB {
         }
     }
 
-    public static boolean eliminarCliente(int id) {
+    public static boolean eliminarCliente(String customerID) {
         List<String> lineas = new ArrayList<>();
         boolean encontrado = false;
         try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] campos = linea.split("\\|");
-                if (campos.length == 6 && Integer.parseInt(campos[0]) == id) {
+                String[] c = linea.split("\\|", -1);
+                if (c.length == CANTIDAD_CAMPOS && c[0].equals(customerID)) {
                     encontrado = true;
                     continue;
                 }
@@ -142,5 +147,14 @@ public class ClienteDB {
             e.printStackTrace();
         }
         return true;
+    }
+
+    private static Cliente crearCliente(String[] c) {
+        return new Cliente(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9],
+                c[10], c[11], c[12], c[13], c[14], c[15], c[16], c[17], c[18], c[19]);
+    }
+
+    private static String lineaDeCliente(Cliente c) {
+        return String.join("|", c.toArray());
     }
 }

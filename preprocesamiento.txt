@@ -1,0 +1,19 @@
+CAT|gender|Female;Male
+NUM|SeniorCitizen|0.0|1.0
+CAT|Partner|Yes;No
+CAT|Dependents|No;Yes
+NUM|tenure|0.0|72.0
+CAT|PhoneService|No;Yes
+CAT|MultipleLines|No phone service;No;Yes
+CAT|InternetService|DSL;Fiber optic;No
+CAT|OnlineSecurity|No;Yes;No internet service
+CAT|OnlineBackup|Yes;No;No internet service
+CAT|DeviceProtection|No;Yes;No internet service
+CAT|TechSupport|No;Yes;No internet service
+CAT|StreamingTV|No;Yes;No internet service
+CAT|StreamingMovies|No;Yes;No internet service
+CAT|Contract|Month-to-month;One year;Two year
+CAT|PaperlessBilling|Yes;No
+CAT|PaymentMethod|Electronic check;Mailed check;Bank transfer (automatic);Credit card (automatic)
+NUM|MonthlyCharges|18.25|118.75
+NUM|TotalCharges|0.0|8684.8

@@ -64,7 +64,7 @@ public class LoginForm extends JFrame {
                 toggleBtn.setText("Ver");
             } else {
                 passwordField.setEchoChar((char) 0);
-                toggleBtn.setText("🙈Ocultar");
+                toggleBtn.setText("Ocultar");
             }
         });
 

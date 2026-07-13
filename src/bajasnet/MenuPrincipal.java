@@ -69,10 +69,17 @@ public class MenuPrincipal extends JFrame {
 
         JButton btnClientes = new JButton("Gestión de Clientes");
         btnClientes.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        gbc.gridy = fila;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.gridy = fila++;
+        gbc.insets = new Insets(0, 0, 12, 0);
         panel.add(btnClientes, gbc);
         btnClientes.addActionListener(e -> new MenuGestionClientes(this).setVisible(true));
+
+        JButton btnPromociones = new JButton("Gestión de Promociones");
+        btnPromociones.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        gbc.gridy = fila;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        panel.add(btnPromociones, gbc);
+        btnPromociones.addActionListener(e -> new MenuGestionPromocion(this, operador).setVisible(true));
 
         contenedor.add(panel, BorderLayout.CENTER);
         add(contenedor);

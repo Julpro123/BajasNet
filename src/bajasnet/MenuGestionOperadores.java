@@ -316,7 +316,7 @@ public class MenuGestionOperadores extends JFrame {
         String password  = detPasswordField.getText().trim();
         String dni       = detDniField.getText().trim();
 
-        String error = OperadorServicio.validarDatos(nombre, apellido, email, password, dni);
+        String error = OperadorServicio.validarDatos(null, nombre, apellido, email, password, dni);
         if (error != null) {
             JOptionPane.showMessageDialog(this, error, "Error", JOptionPane.WARNING_MESSAGE);
             return;
