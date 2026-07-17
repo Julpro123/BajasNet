@@ -29,12 +29,15 @@ public class MenuGestionClientes extends JFrame {
     
     private JLabel detErrorLabel;
     private JPanel botonesPanel;
-    private JButton btnCrear, btnEliminar, btnModificar, btnCancelar, btnPredecir;
+    private JButton btnCrear, btnEliminar, btnModificar, btnCancelar, btnPredecir, btnVerPromos;
     private boolean modoEdicion = false;
     private boolean modoCreacion = false;
     private String idEnEdicion;
 
-    public MenuGestionClientes(JFrame parent) {
+    private final Operador operador;   // operador logueado (para auditar quién predice)
+
+    public MenuGestionClientes(JFrame parent, Operador operador) {
+        this.operador = operador;
         setTitle("Gestión de Clientes");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1300, 600);
@@ -132,20 +135,22 @@ public class MenuGestionClientes extends JFrame {
 
         panel.add(centro, BorderLayout.CENTER);
 
-        botonesPanel = new JPanel(new GridLayout(1, 4, 12, 0));
+        botonesPanel = new JPanel(new GridLayout(1, 5, 12, 0));
         botonesPanel.setOpaque(false);
         btnCrear     = new JButton("Crear Cliente");
         btnEliminar  = new JButton("Eliminar Cliente");
         btnModificar = new JButton("Modificar Cliente");
         btnPredecir  = new JButton("Predecir Churn");
+        btnVerPromos = new JButton("Ver Promociones");
         btnCancelar  = new JButton("Cancelar");
-        for (JButton b : new JButton[]{btnCrear, btnEliminar, btnModificar, btnPredecir, btnCancelar})
+        for (JButton b : new JButton[]{btnCrear, btnEliminar, btnModificar, btnPredecir, btnVerPromos, btnCancelar})
             b.setFont(new Font("SansSerif", Font.PLAIN, 13));
 
         botonesPanel.add(btnCrear);
         botonesPanel.add(btnEliminar);
         botonesPanel.add(btnModificar);
         botonesPanel.add(btnPredecir);
+        botonesPanel.add(btnVerPromos);
         panel.add(botonesPanel, BorderLayout.SOUTH);
 
         btnCrear.addActionListener(e -> {
@@ -181,6 +186,14 @@ public class MenuGestionClientes extends JFrame {
         btnPredecir.addActionListener(e -> {
             try {
                 predecirClienteSeleccionado();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error inesperado: " + ex, "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        btnVerPromos.addActionListener(e -> {
+            try {
+                verPromocionesDelCliente();
             } catch (Exception ex) {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Error inesperado: " + ex, "Error", JOptionPane.ERROR_MESSAGE);
@@ -401,12 +414,23 @@ public class MenuGestionClientes extends JFrame {
         Cliente c = new Cliente(v[0],v[1], v[2], v[3], v[4], v[5], v[6], v[7],
                 v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]);
 
-        double prob = PrediccionServicio.predecirChurn(c);
+        // Predecir y registrar en el historial de auditoría (queda quién, cuándo y con qué datos).
+        String emailOperador = operador != null ? operador.getEmail() : "desconocido";
+        double prob = PrediccionServicio.predecirYRegistrar(c, emailOperador);
         JOptionPane.showMessageDialog(this,
             String.format("Cliente: %s%n%nProbabilidad de baja (churn): %.1f%%%nRiesgo: %s%n%n%s",
                 idCliente, prob * 100, PrediccionServicio.nivelRiesgo(prob), PrediccionServicio.recomendacion(prob)),
             "Predicción de Churn", JOptionPane.INFORMATION_MESSAGE);
 }
+
+    private void verPromocionesDelCliente() {
+        if (tabla.getSelectedRow() == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccioná un cliente para ver sus promociones.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        String idCliente = getValorComponente(detFields[0]);
+        PromocionesDelCliente.mostrar(this, idCliente);
+    }
 
     private void iniciarCreacion() {
         tabla.clearSelection();
@@ -480,11 +504,12 @@ public class MenuGestionClientes extends JFrame {
             botonesPanel.add(btnCancelar);
         } else {
             btnModificar.setText("Modificar Cliente");
-            botonesPanel.setLayout(new GridLayout(1, 4, 12, 0));
+            botonesPanel.setLayout(new GridLayout(1, 5, 12, 0));
             botonesPanel.add(btnCrear);
             botonesPanel.add(btnEliminar);
             botonesPanel.add(btnModificar);
             botonesPanel.add(btnPredecir);
+            botonesPanel.add(btnVerPromos);
         }
         botonesPanel.revalidate();
         botonesPanel.repaint();

@@ -21,10 +21,6 @@ public class OperadorServicio {
             return null;
         }
 
-        if ("admin".equals(email) && "admin".equals(password)) {
-            return new Operador("admin", "admin", "Admin", "Sistema", "00000000", true);
-        }
-
         if (!email.matches(REGEX_EMAIL)) {
             return null;
         }

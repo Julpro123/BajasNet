@@ -49,7 +49,7 @@ public class MenuPrincipal extends JFrame {
 
         int fila = 1;
 
-        if (operador.isAdmin()) {
+        if (operador instanceof Admin) {
             JLabel adminLabel = new JLabel("Panel de Administración");
             adminLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
             adminLabel.setForeground(new Color(80, 100, 140));
@@ -72,14 +72,21 @@ public class MenuPrincipal extends JFrame {
         gbc.gridy = fila++;
         gbc.insets = new Insets(0, 0, 12, 0);
         panel.add(btnClientes, gbc);
-        btnClientes.addActionListener(e -> new MenuGestionClientes(this).setVisible(true));
+        btnClientes.addActionListener(e -> new MenuGestionClientes(this, operador).setVisible(true));
 
         JButton btnPromociones = new JButton("Gestión de Promociones");
         btnPromociones.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        gbc.gridy = fila;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.gridy = fila++;
+        gbc.insets = new Insets(0, 0, 12, 0);
         panel.add(btnPromociones, gbc);
         btnPromociones.addActionListener(e -> new MenuGestionPromocion(this, operador).setVisible(true));
+
+        JButton btnHistorial = new JButton("Historial de Predicciones");
+        btnHistorial.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        gbc.gridy = fila;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        panel.add(btnHistorial, gbc);
+        btnHistorial.addActionListener(e -> new MenuHistorialPredicciones(this).setVisible(true));
 
         contenedor.add(panel, BorderLayout.CENTER);
         add(contenedor);

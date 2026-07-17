@@ -1,1 +1,10 @@
-080ECF2A|1|1|1
+BE108F7E|Servicio Telefónico|10%|10% de descuento en el abono de telefonía.
+0B4EC95F|Líneas Múltiples|15%|15% off al contratar líneas adicionales.
+43824390|Internet DSL|10%|10% de descuento en el plan de Internet DSL.
+366586B4|Internet Fibra Óptica|20%|20% off el primer año en fibra óptica.
+E112ED69|Seguridad Online|100%|Seguridad Online gratis por 3 meses.
+74405FF0|Respaldo Online|50%|50% de descuento en el respaldo en la nube.
+E41B258C|Protección de Dispositivo|25%|25% off en la protección de equipos.
+1AAF1106|Soporte Técnico|100%|Soporte técnico premium sin cargo por 2 meses.
+A979C211|Streaming TV|30%|30% de descuento en el paquete de Streaming TV.
+29324A16|Streaming Películas|30%|30% off en el Streaming de películas.

@@ -19,7 +19,7 @@ public class MenuGestionPromocion extends JFrame {
     private JTextField detIdField, detServicioField, detDescuentoField, detDescripcionField;
     private JLabel detErrorLabel;
     private JPanel botonesPanel;
-    private JButton btnCrear, btnEliminar, btnModificar, btnCancelar, btnAsignar;
+    private JButton btnCrear, btnEliminar, btnModificar, btnCancelar;
     private boolean modoEdicion = false;
     private boolean modoCreacion = false;
     private String idEnEdicion;
@@ -124,8 +124,7 @@ public class MenuGestionPromocion extends JFrame {
         btnEliminar  = new JButton("Eliminar Promoción");
         btnModificar = new JButton("Modificar Promoción");
         btnCancelar  = new JButton("Cancelar");
-        btnAsignar   = new JButton("Asignar a Cliente");
-        for (JButton b : new JButton[]{btnCrear, btnEliminar, btnModificar, btnCancelar, btnAsignar})
+        for (JButton b : new JButton[]{btnCrear, btnEliminar, btnModificar, btnCancelar})
             b.setFont(new Font("SansSerif", Font.PLAIN, 13));
 
         panel.add(botonesPanel, BorderLayout.SOUTH);
@@ -141,14 +140,6 @@ public class MenuGestionPromocion extends JFrame {
         btnEliminar.addActionListener(e -> {
             try {
                 eliminarPromocionSeleccionada();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Error inesperado: " + ex, "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        btnAsignar.addActionListener(e -> {
-            try {
-                asignarPromocion();
             } catch (Exception ex) {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Error inesperado: " + ex, "Error", JOptionPane.ERROR_MESSAGE);
@@ -349,50 +340,6 @@ public class MenuGestionPromocion extends JFrame {
         detDescripcionField.setText((String) tableModel.getValueAt(modelRow, 3));
     }
 
-    private void asignarPromocion() {
-        if (tabla.getSelectedRow() == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccioná una promoción de la tabla para asignar.", "Info", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        String idPromocion = detIdField.getText();
-
-        List<Cliente> clientes = ClienteServicio.listarClientes();
-        if (clientes.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay clientes registrados.", "Info", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        DefaultTableModel modeloClientes = new DefaultTableModel(
-            new Object[]{"CustomerID", "Género", "Tenure", "Contract"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        for (Cliente c : clientes) {
-            modeloClientes.addRow(new Object[]{c.getIdCliente(), c.getGenero(), c.getAntiguedad(), c.getContrato()});
-        }
-
-        JTable tablaClientes = new JTable(modeloClientes);
-        JScrollPane scroll = new JScrollPane(tablaClientes);
-        scroll.setPreferredSize(new Dimension(360, 200));
-
-        int opcion = JOptionPane.showConfirmDialog(this, scroll, "Seleccionar Cliente",
-            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-        if (opcion == JOptionPane.OK_OPTION) {
-            int fila = tablaClientes.getSelectedRow();
-            if (fila == -1) {
-                JOptionPane.showMessageDialog(this, "Debe seleccionar un cliente.", "Info", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            String idCliente = (String) modeloClientes.getValueAt(fila, 0);
-            JOptionPane.showMessageDialog(this,
-                "Cliente: " + idCliente + "\nPromoción: " + idPromocion +
-                "\n\nLa asignación se realizará aquí.", "Asignar", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-
     private void setDetalleEditable(boolean editable) {
         detServicioField.setEditable(editable);
         detDescuentoField.setEditable(editable);
@@ -409,15 +356,12 @@ public class MenuGestionPromocion extends JFrame {
             botonesPanel.add(btnCancelar);
         } else {
             btnModificar.setText("Modificar Promoción");
-            if (operador.isAdmin()) {
-                botonesPanel.setLayout(new GridLayout(1, 4, 12, 0));
+            // Solo el admin gestiona promociones. Los operadores comunes solo consultan.
+            if (operador instanceof Admin) {
+                botonesPanel.setLayout(new GridLayout(1, 3, 12, 0));
                 botonesPanel.add(btnCrear);
                 botonesPanel.add(btnEliminar);
                 botonesPanel.add(btnModificar);
-                botonesPanel.add(btnAsignar);
-            } else {
-                botonesPanel.setLayout(new GridLayout(1, 1, 12, 0));
-                botonesPanel.add(btnAsignar);
             }
         }
         botonesPanel.revalidate();

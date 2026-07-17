@@ -61,6 +61,16 @@ public class PrediccionServicio {
         return arr;
     }
 
+    /**
+     * Predice el churn del cliente y ADEMÁS registra la predicción en el
+     * historial de auditoría (predicciones.txt). Devuelve la probabilidad 0..1.
+     */
+    public static double predecirYRegistrar(Cliente cliente, String emailOperador) throws IOException {
+        double prob = predecirChurn(cliente);
+        PrediccionDB.registrar(cliente, emailOperador, prob, nivelRiesgo(prob), recomendacion(prob));
+        return prob;
+    }
+
     public static String nivelRiesgo(double prob) {
         if (prob >= 0.70) return "ALTO";
         if (prob >= 0.45) return "MEDIO";

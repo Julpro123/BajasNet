@@ -241,7 +241,7 @@ public class MenuGestionOperadores extends JFrame {
         for (Operador op : operadores) {
             tableModel.addRow(new Object[]{
                 op.getEmail(), op.getNombre(), op.getApellido(), op.getDni(), op.getPassword(),
-                op.isAdmin() ? "Sí" : "No"
+                op instanceof Admin ? "Sí" : "No"
             });
         }
     }

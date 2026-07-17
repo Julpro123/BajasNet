@@ -93,7 +93,14 @@ public class LoginForm extends JFrame {
     }
 
     private void iniciarSesion() {
-        Operador op = OperadorServicio.validarLogin(emailField.getText().trim(), new String(passwordField.getPassword()).trim());
+        String email = emailField.getText().trim();
+        String password = new String(passwordField.getPassword()).trim();
+
+        // Primero se intenta como admin (AdminServicio/AdminDB); si no, como operador.
+        Operador op = AdminServicio.validarLogin(email, password);
+        if (op == null) {
+            op = OperadorServicio.validarLogin(email, password);
+        }
         if (op == null) {
             JOptionPane.showMessageDialog(this,
                 "Email o contraseña incorrectos.",
